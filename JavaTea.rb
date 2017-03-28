@@ -20,8 +20,10 @@ module JavaTea
 	end
 
 	class TempVar
+		attr_reader :pub
 		attr_reader :type, :varname, :defaultValue
-		def initialize(type, varname, defaultValue)
+		def initialize(pub, type, varname, defaultValue)
+			@pub = pub
 			@type, @varname = type, varname
 			@defaultValue = defaultValue
 		end
@@ -130,7 +132,7 @@ module JavaTea
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_classes.last.getsetVars.push(
-						TempVar.new( type, name, dval )
+						TempVar.new( true, type, name, dval )
 					)
 				rescue => e 
 					puts [e.message,e.backtrace].join("\n")
@@ -143,7 +145,7 @@ module JavaTea
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_global_vars.push(
-						TempVar.new( type, name, dval )
+						TempVar.new( true, type, name, dval )
 					)
 				rescue => e 
 					puts [e.message,e.backtrace].join("\n")
@@ -168,7 +170,20 @@ module JavaTea
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_classes.last.publicVars.push(
-						TempVar.new( type, name, dval )
+						TempVar.new( true, type, name, dval )
+					)
+				rescue => e 
+					puts [e.message,e.backtrace].join("\n")
+				end
+			else
+				begin
+					type = line.match(/\+\s?([\w_]+)/)[1]
+					name = line.match(/\+\s?(?:[\w_]+)\s+([\w_]+)/)[1]
+					regexp = /\+\s?(?:[\w_]+)\s+(?:[\w_]+)\s+([\d\w\"\']+)/
+
+					dval = line.match(regexp) ? $1 : nil
+					@_temp_global_vars.push(
+						TempVar.new( true, type, name, dval )
 					)
 				rescue => e 
 					puts [e.message,e.backtrace].join("\n")
@@ -186,7 +201,20 @@ module JavaTea
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_classes.last.privateVars.push(
-						TempVar.new( type, name, dval )
+						TempVar.new( false, type, name, dval )
+					)
+				rescue => e 
+					puts [e.message,e.backtrace].join("\n")
+				end
+			else
+				begin
+					type = line.match(/\s*\-\s?([\w_]+)/)[1]
+					name = line.match(/\s*\-\s?(?:[\w_]+)\s+([\w_]+)/)[1]
+					regexp = /\s*\-\s?(?:[\w_]+)\s+(?:[\w_]+)\s+([\d\w\"\']+)/
+
+					dval = line.match(regexp) ? $1 : nil
+					@_temp_global_vars.push(
+						TempVar.new( false, type, name, dval )
 					)
 				rescue => e 
 					puts [e.message,e.backtrace].join("\n")
@@ -234,7 +262,11 @@ module JavaTea
 
 			# global vars
 			if @_temp_global_vars.size > 0
-				result.push("\t// global")
+				result.push("// global")
+				@_temp_global_vars.each do |var|
+					result.push("#{var.pub ? "public " : ""}#{var.varname};")
+				end
+				result.push("")
 			end
 
 			@_temp_classes.each do |klass|
@@ -368,7 +400,7 @@ module JavaTea
 						type.gsub!(/\[\]/){""}
 						result.push("\t\t#{var.type} #{var.varname} = new #{type}[#{var.defaultValue}];")
 					else
-						result.push("#{var.type}<#{var.defaultValue}> \t\t#{var.varname} = new #{var.type}<>();")
+						result.push("\t\t#{var.type}<#{var.defaultValue}> #{var.varname} = new #{var.type}<>();")
 					end
 				end
 			end
@@ -384,9 +416,9 @@ array=[
 	"+ class Filename",
 	"	+ String[] line 10",
 	"	~ int some 0",
-	"   - double privatedouble",
-	"class Somewhat by Else",
-	"	-def void makeSomeFun (int x, int y)"
+	"	-def void makeSomeFun (int x, int y)",
+	"class Foo",
+	"	+ ArrayList some SomeClass",
 ]
 
 puts JavaTea.convert(array)

@@ -43,11 +43,13 @@ module JavaTea
 	class << self
 		def convert(array)
 			@_temp_imports = []
+			@_temp_package = ""
 			@_temp_classes = []
 			@_temp_global_vars = []
 
 			array.each do |line|
 				_make_import(line) 				if line =~ /\*\s?java/i
+				_make_package(line) 			if line =~ /\&\s?java/i
 				_make_public_class(line) 		if line =~ /\+\s?class/i
 				_make_private_class(line) 		if line =~ /\-?\s?class/i
 				_make_getset_variable(line)		if line =~ /\s*~\s?/i
@@ -79,7 +81,7 @@ module JavaTea
 			end
 		end
 
-		def _make_import(line)
+		def _make_package(line)
 			line.gsub!(/^\*\s?/){""}
 			if line =~ /,/
 				array = line.split(/,/)
@@ -88,6 +90,11 @@ module JavaTea
 			else
 				@_temp_imports.push line
 			end
+		end
+
+		def _make_import(line)
+			line.gsub!(/^\&\s?/){""}
+			@_temp_package = line
 		end
 
 		def _make_public_class(line)
@@ -273,6 +280,10 @@ module JavaTea
 				# begin
 				if @_temp_classes.size > 1
 					result.push("/* --- #{klass.classname.upcase} --- */\n")
+				end
+
+				if klass.pub
+					result.push("package #{@_temp_package};")
 				end
 
 				result.push(

@@ -1,0 +1,5 @@
++ class Filename
+	+ String[] line 10
+	~ int some 0
+class Somewhat by Else
+	= makeSomeFun

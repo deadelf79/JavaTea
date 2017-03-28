@@ -29,10 +29,12 @@ module JavaTea
 
 	class TempDef
 		attr_reader :pub
-		attr_reader :type, :defname, :params
-		def initialize(pub, type, defname, params)
+		attr_reader :type, :defname
+		attr_accessor :params
+		def initialize(pub, type, defname)
 			@pub = pub
-			@type, @defname, @params = type, defname, params
+			@type, @defname = type, defname
+			@params = []
 		end
 	end
 
@@ -43,16 +45,16 @@ module JavaTea
 			@_temp_global_vars = []
 
 			array.each do |line|
-				_make_import(line) 				if line =~ /\*[\s]?java/i
-				_make_public_class(line) 		if line =~ /\+[\s]?class/i
-				_make_private_class(line) 		if line =~ /\-?[\s]?class/i
-				_make_getset_variable(line)		if line =~ /[\s]*~[\s]?/i
-				_make_get_variable(line)		if line =~ /[\s]*~\-[\s]?/i
-				_make_set_variable(line)		if line =~ /[\s]*~\+[\s]?/i
-				_make_public_method(line)		if line =~ /[\s]+\+def[\s]?/i
-				_make_private_method(line)		if line =~ /[\s]+\-?def[\s]?/i
-				_make_public_variable(line)		if line =~ /[\s]*\+[\s]?/i
-				_make_private_variable(line)	if line =~ /[\s]*\-[\s]?/i
+				_make_import(line) 				if line =~ /\*\s?java/i
+				_make_public_class(line) 		if line =~ /\+\s?class/i
+				_make_private_class(line) 		if line =~ /\-?\s?class/i
+				_make_getset_variable(line)		if line =~ /\s*~\s?/i
+				_make_get_variable(line)		if line =~ /\s*~g\s?/i
+				_make_set_variable(line)		if line =~ /\s*~s\s?/i
+				_make_public_method(line)		if line =~ /\s+\+def\s?/i
+				_make_private_method(line)		if line =~ /\s+\-?def\s?/i
+				_make_public_variable(line)		if line =~ /\s*\+\s?/i
+				_make_private_variable(line)	if line =~ /\s*\-\s?/i
 			end
 
 			return _write_code
@@ -76,7 +78,7 @@ module JavaTea
 		end
 
 		def _make_import(line)
-			line.gsub!(/^\*[\s]?/){""}
+			line.gsub!(/^\*\s?/){""}
 			if line =~ /,/
 				array = line.split(/,/)
 				array.each{|item|item.strip!}
@@ -88,8 +90,8 @@ module JavaTea
 
 		def _make_public_class(line)
 			begin
-				regexp 	= /\+[\s]?class[\s]?([\w_]+)/i
-				regexp2 = /\+[\s]?class[\s]?(?:[\w_]+)[\s]?by[\s]?([\w_]+)/i
+				regexp 	= /\+\s?class\s?([\w_]+)/i
+				regexp2 = /\+\s?class\s?(?:[\w_]+)\s?by\s?([\w_]+)/i
 				@_temp_classes.push TempClass.new(
 					true,
 					line.match(regexp)[1]
@@ -103,10 +105,10 @@ module JavaTea
 		end
 
 		def _make_private_class(line)
-			return if line.match(/\+[\s]?class/)
+			return if line.match(/\+\s?class/)
 			begin
-				regexp 	= /\-?[\s]?class[\s]?([\w_]+)/i
-				regexp2 = /\-?[\s]?class[\s]?(?:[\w_]+)[\s]?by[\s]?([\w_]+)/i
+				regexp 	= /\-?\s?class\s?([\w_]+)/i
+				regexp2 = /\-?\s?class\s?(?:[\w_]+)\s?by\s?([\w_]+)/i
 				@_temp_classes.push TempClass.new(
 					false,
 					line.match(regexp)[1]
@@ -122,9 +124,9 @@ module JavaTea
 		def _make_getset_variable(line)
 			if line =~ /^\t/
 				begin
-					type = line.match(/[\s]*~[\s]?([\w_]+)/)[1]
-					name = line.match(/[\s]*~[\s]?(?:[\w_]+)[\s]+([\w_]+)/)[1]
-					regexp = /[\s]*~[\s]?(?:[\w_]+)[\s]+(?:[\w_]+)[\s]+([\d\w\"\']+)/
+					type = line.match(/\s*~\s?([\w_]+)/)[1]
+					name = line.match(/\s*~\s?(?:[\w_]+)\s+([\w_]+)/)[1]
+					regexp = /\s*~\s?(?:[\w_]+)\s+(?:[\w_]+)\s+([\d\w\"\']+)/
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_classes.last.getsetVars.push(
@@ -135,9 +137,9 @@ module JavaTea
 				end
 			else
 				begin
-					type = line.match(/[\s]*~[\s]?([\w_]+)/)[1]
-					name = line.match(/[\s]*~[\s]?(?:[\w_]+)[\s]+([\w_]+)/)[1]
-					regexp = /[\s]*~[\s]?(?:[\w_]+)[\s]+(?:[\w_]+)[\s]+([\d\w\"\']+)/
+					type = line.match(/\s*~\s?([\w_]+)/)[1]
+					name = line.match(/\s*~\s?(?:[\w_]+)\s+([\w_]+)/)[1]
+					regexp = /\s*~\s?(?:[\w_]+)\s+(?:[\w_]+)\s+([\d\w\"\']+)/
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_global_vars.push(
@@ -160,9 +162,9 @@ module JavaTea
 		def _make_public_variable(line)
 			if line =~ /^\t/
 				begin
-					type = line.match(/[\s]*\+[\s]?([\w_\[\]]+)/)[1]
-					name = line.match(/[\s]*\+[\s]?(?:[\w_\[\]]+)[\s]+([\w_]+)/)[1]
-					regexp = /[\s]*\+[\s]?(?:[\w_\[\]]+)[\s]+(?:[\w_]+)[\s]+([\d\w\"\']+)/
+					type = line.match(/\s*\+\s?([\w_\[\]]+)/)[1]
+					name = line.match(/\s*\+\s?(?:[\w_\[\]]+)\s+([\w_]+)/)[1]
+					regexp = /\s*\+\s?(?:[\w_\[\]]+)\s+(?:[\w_]+)\s+([\d\w\"\']+)/
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_classes.last.publicVars.push(
@@ -175,12 +177,12 @@ module JavaTea
 		end
 
 		def _make_private_variable(line)
-			return if line =~ /[\s]+\-?def[\s]?/
+			return if line =~ /\s+\-?def\s?/
 			if line =~ /^\t/
 				begin
-					type = line.match(/[\s]*\-[\s]?([\w_\[\]]+)/)[1]
-					name = line.match(/[\s]*\-[\s]?(?:[\w_\[\]]+)[\s]+([\w_]+)/)[1]
-					regexp = /[\s]*\-[\s]?(?:[\w_\[\]]+)[\s]+(?:[\w_]+)[\s]+([\d\w\"\'\.]+)/
+					type = line.match(/\s*\-\s?([\w_\[\]]+)/)[1]
+					name = line.match(/\s*\-\s?(?:[\w_\[\]]+)\s+([\w_]+)/)[1]
+					regexp = /\s*\-\s?(?:[\w_\[\]]+)\s+(?:[\w_]+)\s+([\d\w\"\'\.]+)/
 
 					dval = line.match(regexp) ? $1 : nil
 					@_temp_classes.last.privateVars.push(
@@ -199,20 +201,21 @@ module JavaTea
 		def _make_private_method(line)
 			if line =~ /^\t/
 				begin
-					type = line.match(/[\s]*\-?def[\s]?([\w_\[\]]+)/)[1]
-					name = line.match(/[\s]*\-?def[\s]?(?:[\w_\[\]]+)[\s]+([\w_]+)/)[1]
-					regexp = /[\s]*\-?def[\s]?(?:[\w_\[\]]+)[\s]+(?:[\w_]+)[\s]+\(([\d\w\"\'\,\.]+)\)/
+					type = line.match(/\s*\-?def\s?([\w_\[\]]+)/)[1]
+					name = line.match(/\s*\-?def\s?(?:[\w_\[\]]+)\s+([\w_]+)/)[1]
+					regexp = /\s*\-?def\s?(?:[\w_\[\]]+)\s+(?:[\w_]+)\s+\(([\s\w\,\"\'\.]+)\)/
 
 					array = line.match(regexp) ? $1 : nil
 					params = array.split(/,/) if array.is_a? String
+					params.each{|item|item.strip!}
 					@_temp_classes.last.methods.push(
 						TempDef.new( false,
 							type,
-							name,
-							params
+							name
 						)
 					)
-					puts @_temp_classes.last.methods.last.inspect
+
+					# puts @_temp_classes.last.methods.last.inspect
 				rescue => e 
 					puts [e.message,e.backtrace].join("\n")
 				end
@@ -381,9 +384,10 @@ array=[
 	"+ class Filename",
 	"	+ String[] line 10",
 	"	~ int some 0",
+	"   - double privatedouble",
 	"class Somewhat by Else",
-	"	-def void makeSomeFun (arg1, arg2)"
+	"	-def void makeSomeFun (int x, int y)"
 ]
 
 puts JavaTea.convert(array)
-JavaTea.convert_file("./newclass.txt")
+JavaTea.convert_file("./example.txt")
